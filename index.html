@@ -681,7 +681,7 @@ function renderHeute() {
   var checks = state.checks[t] || [false, false, false];
   var sc = state.score || computeScore(state.idx);
   var streak = streakCount();
-  document.getElementById("appSub").textContent = "Woche " + week + ", Tag " + (dn + 1) + " von 7";
+  document.getElementById("appSub").textContent = "Woche " + week + ", Tag " + (dn + 1) + " von 7 deines Plans";
 
   var bars = Object.keys(sc.parts).map(function (k) {
     return '<div class="bar-row"><span class="bar-lbl">' + k + '</span><div class="bar-track"><div class="bar-fill" style="width:' + sc.parts[k] + '%"></div></div></div>';
@@ -697,6 +697,13 @@ function renderHeute() {
   if (!state.hintDone) html += '<div class="card soft hint-card"><div class="card-lbl">👇 Gut zu wissen</div><h3>Unten findest du 5 Bereiche</h3><p>Tippe unten auf die Symbole, um zu wechseln: <b>Heute</b>, <b>Ernährung</b>, <b>Übungen</b>, <b>Rezepte</b> und <b>Check-in</b>. Dort steckt noch viel mehr drin.</p><div class="btn-row"><button class="btn" onclick="closeHint()">Verstanden</button></div></div>';
   html += '<div class="card"><div class="card-lbl">Dein Alltags-Score</div><div class="score-wrap"><div class="score-ring" style="--p:' + sc.total + '"><div class="score-in"><div class="score-num">' + sc.total + '</div><div class="score-of">von 100</div></div></div><div class="score-label">' + esc(scoreLabel(sc.total)) + '</div></div>' + bars + '<p class="small" style="margin-top:8px;">Der Score zeigt deine Alltagsgewohnheiten, er ist kein medizinischer Wert.</p></div>';
   html += '<div class="card"><div class="today-head"><div class="card-lbl" style="margin:0">Dein Tag heute</div><span class="streak">' + (streak > 0 ? "🔥 " + streak + (streak === 1 ? " Tag" : " Tage") + " in Folge" : "Starte deine Serie") + '</span></div>' + rows + '<p class="small" style="margin-top:8px;">Zwei von drei Häkchen zählen für deine Serie. Dranbleiben schlägt Perfektion.</p></div>';
+  html += '<details class="acc"' + (state.hintDone ? "" : " open") + '><summary>So nutzt du den Kompass</summary><div class="acc-body">' +
+    '<div class="row"><b>Jeden Tag</b><span>Öffne "Heute". Dort stehen 3 Mini-Routinen für genau diesen Tag. Hake ab, was du geschafft hast. Zwei von drei reichen für deine Serie.</span></div>' +
+    '<div class="row"><b>Neuer Tag</b><span>Der Plan wechselt automatisch um Mitternacht: Tag 1, Tag 2 bis Tag 7. Du musst nichts einstellen.</span></div>' +
+    '<div class="row"><b>Nach 7 Tagen</b><span>Beginnt eine neue Woche mit demselben Plan, damit aus den Routinen Gewohnheiten werden. Einen neuen Plan bekommst du über "Quiz neu machen" ganz unten.</span></div>' +
+    '<div class="row"><b>Check-in</b><span>Einmal am Tag oder alle paar Tage, dauert eine Minute. Ab 3 Check-ins bekommst du deinen Report.</span></div>' +
+    '<div class="row"><b>Wenn du magst</b><span>Ernährungsplan, Rezepte, Tagebuch und Übungen nutzt du, wann du sie brauchst.</span></div>' +
+    '</div></details>';
   html += '<details class="acc"><summary>Dein Fokus</summary><div class="acc-body"><p>' + esc(plan.profil) + '</p><p style="margin-top:8px;">' + esc(plan.fokus) + '</p>' + (plan.hormon ? '<p style="margin-top:8px;">' + esc(plan.hormon) + '</p>' : '') + '</div></details>';
   html += '<details class="acc"><summary>Alle 7 Tage ansehen</summary><div class="acc-body">' + week7 + '</div></details>';
   html += hormoneCard(p);
