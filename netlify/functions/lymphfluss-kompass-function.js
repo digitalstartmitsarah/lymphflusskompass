@@ -1,3 +1,7 @@
+// Lymphfluss-Kompass: eine Function, drei Modi
+//   mode "plan"      : kurzer 7-Tage-Routinenplan + Fokus
+//   mode "ernaehrung": 7-Tage-Ernährungsplan mit Einkaufsliste und Hormon-Tipp
+//   mode "report"    : Richtung aus den Check-in-Daten
 exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
@@ -6,47 +10,86 @@ exports.handler = async function(event) {
   try { body = JSON.parse(event.body); }
   catch { return { statusCode: 400, body: 'Invalid JSON' }; }
 
-  const { stadium, bereich, aktivitaet, kompression, lymphdrainage, wasser, gewohnheiten, zyklus, stress, schlaf, schmerzlevel, situation } = body;
-
-  if (!situation || situation.trim().length < 5) {
-    return { statusCode: 400, body: 'Anfrage zu kurz' };
-  }
-
   const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
   if (!ANTHROPIC_API_KEY) {
     return { statusCode: 500, body: 'API Key fehlt' };
   }
 
-  const systemPrompt = `Du bist Sarah Plainer, österreichische Unternehmerin, die Frauen mit Lipödem auf dem Weg zu einem besseren Körpergefühl begleitet.
-Du bekommst strukturierte Angaben zu Stadium, Körperbereich, Aktivität, Kompression, Lymphdrainage, Trinkverhalten, Gewohnheiten, Zyklus, Stress, Schlaf und Schmerzlevel einer Frau, sowie einen Freitext, in dem sie ihre aktuell größte Herausforderung beschreibt.
+  // Eingaben begrenzen und bereinigen
+  const clip = (v, n) => String(v === undefined || v === null ? '' : v).slice(0, n || 300);
+  const mode = clip(body.mode || 'plan', 20);
+  const p = body.profil || {};
 
-Dein Ton: direkt, warm, ehrlich, wie eine gute Freundin, die selbst Erfahrung mit dem Thema hat. Kein Coaching-Sprech, keine Floskeln, keine leeren Phrasen wie "Du schaffst das" ohne Substanz. Du sagst "du", nicht "Sie". Verwende NIEMALS Gedankenstriche (– oder —), nutze stattdessen Punkte oder Kommas. Nutze auch KEINE Trennlinien aus mehreren Strichen oder ähnlichen Zeichen.
+  const profilText = `Stadium: ${clip(p.stadium)}
+Körperbereich: ${clip(p.bereich)}
+Aktivität: ${clip(p.aktivitaet)}
+Kompression: ${clip(p.kompression)}
+Lymphdrainage: ${clip(p.lymphdrainage)}
+Trinken: ${clip(p.wasser)}
+Gewohnheiten: ${clip(p.gewohnheiten, 500)}
+Stress: ${clip(p.stress)}
+Schlaf: ${clip(p.schlaf)}
+Schmerzlevel (1 bis 10): ${clip(p.schmerzlevel, 5)}
+Hormonelle Situation: ${clip(p.hormone)}
+Zyklusphase aktuell: ${clip(p.zyklusphase) || 'nicht relevant oder unbekannt'}`;
 
-Erstelle einen vollständigen, individuellen 7-Tage-Lymphfluss-Plan, der wirklich auf die konkreten Angaben eingeht, nicht generisch klingt. Baue ihn so auf:
+  // Sicherheitsnetz: Schwangerschaft und Stillzeit bekommen keinen Ernährungsplan
+  const hormoneLower = clip(p.hormone).toLowerCase();
+  if (mode === 'ernaehrung' && hormoneLower.indexOf('schwanger') > -1) {
+    return { statusCode: 400, body: 'In Schwangerschaft und Stillzeit bitte ärztlich begleiten lassen.' };
+  }
 
-1. Kurzes Profil (2 bis 3 Sätze): fasse zusammen, wo diese Frau gerade steht, basierend auf Stadium, Bereich und ihrem Freitext.
-2. Direkte Antwort auf ihre Herausforderung (3 bis 5 Sätze): gehe konkret auf das ein, was sie im Freitext beschrieben hat, mit echten, umsetzbaren Hinweisen, keine Allgemeinplätze.
-3. 7-Tage-Plan: für jeden Tag (Montag bis Sonntag) eine kurze, konkrete Struktur mit Morgens, Mittags und Abends, jeweils 1 bis 2 knappe, machbare Maßnahmen (z.B. Bewegung, Kompression, Hochlagerung, Trinkmenge, Ernährung), passend zu Stadium und Alltag der Frau. Keine langen Erklärungen pro Tag, kurz und präzise.
-4. Ernährung und Trinken: 3 bis 4 konkrete Tipps, abgestimmt auf Stadium und Gewohnheiten.
-5. Worauf du achten solltest: 3 bis 4 Dinge, die den Lymphfluss aktuell eher bremsen könnten, basierend auf ihren Angaben.
-6. Ein ermutigender Abschlusssatz, ehrlich und ohne Floskeln.
+  const basis = `Du bist Sarah Plainer, österreichische Unternehmerin. Du hast selbst Lipödem im ersten Stadium und hast es mit einfachen, konsequenten Routinen gut im Griff. Du begleitest Frauen auf Augenhöhe, du bist keine Ärztin.
 
-Antworte NUR als valides JSON in diesem Format, ohne Markdown, ohne Erklärungen davor oder danach:
-{"profil": "...", "antwort": "...", "tage": [{"tag": "Montag", "morgens": "...", "mittags": "...", "abends": "..."}, ...7 Tage...], "ernaehrung": ["...", "..."], "achtgeben": ["...", "..."], "abschluss": "..."}`;
+Dein Ton: direkt, warm, ehrlich, wie eine gute Freundin. Kein Coaching-Sprech, keine Floskeln. Du sagst "du". Halte alles KURZ und konkret, keine langen Absätze.
+Verwende NIEMALS Gedankenstriche (– oder —), nutze stattdessen Punkte oder Kommas. Keine Trennlinien aus Strichen. Schreibe Zahlenbereiche mit "bis", zum Beispiel "10 bis 15".
 
-  const userMessage = `Stadium: ${stadium || 'unbekannt'}
-Körperbereich: ${bereich || 'unbekannt'}
-Aktivität: ${aktivitaet || 'unbekannt'}
-Kompression: ${kompression || 'unbekannt'}
-Lymphdrainage: ${lymphdrainage || 'unbekannt'}
-Trinkverhalten: ${wasser || 'unbekannt'}
-Bestehende Gewohnheiten: ${gewohnheiten || 'keine Angabe'}
-Zyklus-Zusammenhang: ${zyklus || 'unbekannt'}
-Stresslevel: ${stress || 'unbekannt'}
-Schlafqualität: ${schlaf || 'unbekannt'}
-Schmerzlevel (1 bis 10): ${schmerzlevel || 'unbekannt'}
+Sicherheitsregeln, die du immer einhältst:
+Du stellst keine Diagnosen und versprichst keine Heilung oder Gewichtsabnahme.
+Du empfiehlst keine Medikamente, keine Nahrungsergänzungsmittel und keine Dosierungen.
+Du rätst nie dazu, Therapie, Lymphdrainage, Kompression oder Medikamente zu ändern oder wegzulassen.
+Bei plötzlicher einseitiger Schwellung, Rötung, Überwärmung, Fieber, neuen starken Schmerzen oder Atemnot verweist du auf sofortige ärztliche Abklärung.
+Bei Hormonthemen bleibst du allgemein und vorsichtig ("viele Frauen erleben", "kann"), nie als sichere Aussage über die einzelne Person.
+Antworte NUR als valides JSON ohne Markdown und ohne Text davor oder danach.`;
 
-Größte aktuelle Herausforderung in eigenen Worten: ${situation}`;
+  let system, userMessage, maxTokens;
+
+  if (mode === 'plan') {
+    const situation = clip(body.situation, 1200);
+    if (situation.trim().length < 5) {
+      return { statusCode: 400, body: 'Anfrage zu kurz' };
+    }
+    system = `${basis}
+
+Aufgabe: Erstelle einen einfachen 7-Tage-Routinenplan. Philosophie: keine Extreme, nur einfache Routinen, bei denen man wirklich dranbleibt. Pro Tag genau 3 Mini-Routinen (morgens, mittags, abends), jede höchstens 12 Wörter, alltagstauglich, passend zu Stadium, Körperbereich und Alltag. Beziehe die Hormonlage ein, wenn sie relevant ist.
+Format:
+{"profil": "1 Satz, wo sie gerade steht", "fokus": "2 Sätze, die direkt auf ihre größte Herausforderung eingehen", "tage": [{"tag": "Tag 1", "morgens": "...", "mittags": "...", "abends": "..."}, ...genau 7 Einträge...], "hormon": "1 Satz zur Hormonlage, falls relevant, sonst leer", "abschluss": "1 ehrlicher Satz"}`;
+    userMessage = `${profilText}\n\nGrößte Herausforderung in ihren Worten: ${situation}`;
+    maxTokens = 1700;
+
+  } else if (mode === 'ernaehrung') {
+    const e = body.ernaehrung || {};
+    system = `${basis}
+
+Aufgabe: Erstelle einen alltagstauglichen 7-Tage-Ernährungsplan, der entzündungsarm, ausgewogen und lymphfreundlich ausgerichtet ist (viel Gemüse, ausreichend Eiweiß, gute Fette, wenig stark Verarbeitetes, ausreichend Trinken). Berücksichtige Ernährungsweise, Unverträglichkeiten und Kochzeit strikt. Gerichte nur als kurze Namen mit höchstens 10 Wörtern, keine Rezepte. Die Einkaufsliste ist nach höchstens 6 Gruppen sortiert. Der Hormon-Tipp bezieht sich auf die Zyklusphase oder Hormonlage und bleibt allgemein.
+Format:
+{"prinzip": "höchstens 2 Sätze", "tage": [{"tag": "Montag", "fruehstueck": "...", "mittag": "...", "abend": "...", "snack": "..."}, ...genau 7 Einträge...], "einkauf": ["Gemüse: ...", "Eiweiß: ..."], "trinken": "1 Satz", "hormontipp": "höchstens 2 Sätze"}`;
+    userMessage = `${profilText}\n\nErnährungsweise: ${clip(e.weise)}\nUnverträglichkeiten oder Abneigungen: ${clip(e.unvertraeglich, 400) || 'keine angegeben'}\nKochzeit pro Mahlzeit: ${clip(e.kochzeit)}`;
+    maxTokens = 2300;
+
+  } else if (mode === 'report') {
+    const r = body.report || {};
+    system = `${basis}
+
+Aufgabe: Du bekommst die ausgewerteten Check-in-Daten einer Frau (Durchschnitte, Trends, Auffälligkeiten). Gib ihr eine ehrliche, kurze Richtung. Sprich Auffälligkeiten als Beobachtung an ("fällt auf"), nie als bewiesene Ursache. Maximal 3 konkrete, einfache nächste Schritte. Wenn die Daten auf etwas hindeuten, das ärztlich angeschaut werden sollte, sag das klar im Feld "arzt", sonst lass es leer.
+Format:
+{"richtung": "2 bis 3 Sätze", "schritte": ["...", "...", "..."], "arzt": "leer oder 1 bis 2 Sätze"}`;
+    userMessage = `${profilText}\n\nAnzahl Check-ins: ${clip(r.anzahl, 5)}\nDurchschnittswerte (1 gut bis 5 stark ausgeprägt, Energie und Stimmung: 5 ist gut): ${clip(JSON.stringify(r.durchschnitt || {}), 600)}\nTrend der letzten Tage: ${clip(JSON.stringify(r.trend || {}), 400)}\nAuffälligkeiten: ${clip(JSON.stringify(r.auffaelligkeiten || []), 1000)}`;
+    maxTokens = 800;
+
+  } else {
+    return { statusCode: 400, body: 'Unbekannter Modus' };
+  }
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -58,8 +101,8 @@ Größte aktuelle Herausforderung in eigenen Worten: ${situation}`;
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 4000,
-        system: systemPrompt,
+        max_tokens: maxTokens,
+        system: system,
         messages: [{ role: 'user', content: userMessage }]
       })
     });
@@ -72,24 +115,22 @@ Größte aktuelle Herausforderung in eigenen Worten: ${situation}`;
     const data = await response.json();
     let rawText = data.content && data.content[0] && data.content[0].text ? data.content[0].text : '';
 
-    // Sicherheitsnetz: Markdown-Codeblock-Zeichen entfernen, falls die KI sie trotz Anweisung mitschickt
+    // Sicherheitsnetz: Markdown-Codeblock-Zeichen entfernen
     rawText = rawText.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
 
     let result;
     try {
       result = JSON.parse(rawText);
     } catch {
-      result = { profil: '', antwort: rawText, tage: [], ernaehrung: [], achtgeben: [], abschluss: '' };
+      return { statusCode: 502, body: 'Antwort konnte nicht gelesen werden' };
     }
 
-    // Sicherheitsnetz: Gedankenstriche zuverlässig entfernen, egal was die KI liefert
+    // Sicherheitsnetz: Gedankenstriche zuverlässig entfernen
     function removeDashes(val) {
       if (typeof val === 'string') {
         return val.replace(/\s*[–—]\s*/g, ', ').replace(/,\s*,/g, ',').replace(/,\s*\./g, '.');
       }
-      if (Array.isArray(val)) {
-        return val.map(removeDashes);
-      }
+      if (Array.isArray(val)) return val.map(removeDashes);
       if (val && typeof val === 'object') {
         const out = {};
         for (const k in val) out[k] = removeDashes(val[k]);
