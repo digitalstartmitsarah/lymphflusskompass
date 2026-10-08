@@ -1,6 +1,7 @@
 // Lymphfluss-Kompass: eine Function, drei Modi
 //   mode "plan"      : kurzer 7-Tage-Routinenplan + Fokus
 //   mode "ernaehrung": 7-Tage-Ernährungsplan mit Einkaufsliste und Hormon-Tipp
+//   mode "rezept"    : ein entzündungsarmes Rezept
 //   mode "report"    : Richtung aus den Check-in-Daten
 exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') {
@@ -35,7 +36,7 @@ Zyklusphase aktuell: ${clip(p.zyklusphase) || 'nicht relevant oder unbekannt'}`;
 
   // Sicherheitsnetz: Schwangerschaft und Stillzeit bekommen keinen Ernährungsplan
   const hormoneLower = clip(p.hormone).toLowerCase();
-  if (mode === 'ernaehrung' && hormoneLower.indexOf('schwanger') > -1) {
+  if ((mode === 'ernaehrung' || mode === 'rezept') && hormoneLower.indexOf('schwanger') > -1) {
     return { statusCode: 400, body: 'In Schwangerschaft und Stillzeit bitte ärztlich begleiten lassen.' };
   }
 
@@ -77,6 +78,17 @@ Format:
     userMessage = `${profilText}\n\nErnährungsweise: ${clip(e.weise)}\nUnverträglichkeiten oder Abneigungen: ${clip(e.unvertraeglich, 400) || 'keine angegeben'}\nKochzeit pro Mahlzeit: ${clip(e.kochzeit)}`;
     maxTokens = 2300;
 
+  } else if (mode === 'rezept') {
+    const e = body.ernaehrung || {};
+    const z = body.rezept || {};
+    system = `${basis}
+
+Aufgabe: Erstelle EIN alltagstaugliches, entzündungsarmes und lymphfreundliches Rezept (viel Gemüse, ausreichend Eiweiß, gute Fette, Kräuter und Gewürze, wenig stark Verarbeitetes, kein Zucker als Zutat). Berücksichtige Mahlzeit, Ernährungsweise, Unverträglichkeiten, vorhandene Zutaten und Zeit strikt. Maximal 10 Zutaten mit Mengen, genau 4 bis 6 kurze Schritte (je höchstens 20 Wörter), normale Haushaltszutaten. Bei Hormonlage oder Zyklusphase darfst du im Tipp allgemein und vorsichtig darauf eingehen. Keine Nahrungsergänzungsmittel, keine Heilversprechen.
+Format:
+{"titel": "kurzer Name", "zeit": "z.B. 20 Minuten", "portionen": "z.B. 2 Portionen", "zutaten": ["200 g ...", "..."], "schritte": ["...", "..."], "tipp": "1 Satz, warum das Rezept guttun kann oder wie man es vorkocht"}`;
+    userMessage = `${profilText}\n\nMahlzeit: ${clip(z.mahlzeit)}\nVorhandene Zutaten oder Wünsche: ${clip(z.zutaten, 200) || 'keine, freie Wahl'}\nZeit: ${clip(z.zeit)}\nErnährungsweise: ${clip(e.weise)}\nUnverträglichkeiten oder Abneigungen: ${clip(e.unvertraeglich, 400) || 'keine angegeben'}`;
+    maxTokens = 1000;
+
   } else if (mode === 'report') {
     const r = body.report || {};
     system = `${basis}
@@ -84,7 +96,7 @@ Format:
 Aufgabe: Du bekommst die ausgewerteten Check-in-Daten einer Frau (Durchschnitte, Trends, Auffälligkeiten). Gib ihr eine ehrliche, kurze Richtung. Sprich Auffälligkeiten als Beobachtung an ("fällt auf"), nie als bewiesene Ursache. Maximal 3 konkrete, einfache nächste Schritte. Wenn die Daten auf etwas hindeuten, das ärztlich angeschaut werden sollte, sag das klar im Feld "arzt", sonst lass es leer.
 Format:
 {"richtung": "2 bis 3 Sätze", "schritte": ["...", "...", "..."], "arzt": "leer oder 1 bis 2 Sätze"}`;
-    userMessage = `${profilText}\n\nAnzahl Check-ins: ${clip(r.anzahl, 5)}\nDurchschnittswerte (1 gut bis 5 stark ausgeprägt, Energie und Stimmung: 5 ist gut): ${clip(JSON.stringify(r.durchschnitt || {}), 600)}\nTrend der letzten Tage: ${clip(JSON.stringify(r.trend || {}), 400)}\nAuffälligkeiten: ${clip(JSON.stringify(r.auffaelligkeiten || []), 1000)}`;
+    userMessage = `${profilText}\n\nAnzahl Check-ins: ${clip(r.anzahl, 5)}\nDurchschnittswerte (1 gut bis 5 stark ausgeprägt, Energie und Stimmung: 5 ist gut): ${clip(JSON.stringify(r.durchschnitt || {}), 600)}\nTrend der letzten Tage: ${clip(JSON.stringify(r.trend || {}), 400)}\nAuffälligkeiten (inklusive Ernährungs-Tagebuch): ${clip(JSON.stringify(r.auffaelligkeiten || []), 1400)}`;
     maxTokens = 800;
 
   } else {
