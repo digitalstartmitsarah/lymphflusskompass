@@ -184,6 +184,22 @@
   .insight { font-size: 13.5px; color: var(--text-mid); line-height: 1.6; padding: 8px 0 8px 14px; border-left: 3px solid var(--blue-mid); margin-bottom: 8px; }
   .steps-list { padding-left: 20px; margin-top: 8px; }
   .steps-list li { font-size: 14px; color: var(--text-mid); line-height: 1.65; margin-bottom: 4px; }
+  .seg { display: flex; gap: 6px; background: var(--blue-soft); border-radius: 14px; padding: 4px; margin-bottom: 14px; }
+  .seg button { flex: 1; border: none; background: none; padding: 10px 6px; border-radius: 11px; font-family: "DM Sans", sans-serif; font-size: 13.5px; color: var(--text-mid); cursor: pointer; }
+  .seg button.on { background: #fff; color: var(--blue-dark); font-weight: 500; box-shadow: 0 1px 6px rgba(74,122,154,.15); }
+  .chip.good.sel { border-color: #4f8a5e; background: #eaf3ec; }
+  .chip.bad.sel { border-color: #b0603a; background: #fbf0ea; }
+  .entry { padding: 12px 0; border-bottom: 1px solid var(--grey-mid); font-size: 13.5px; color: var(--text-mid); line-height: 1.55; }
+  .entry:last-child { border-bottom: none; }
+  .entry b { color: var(--text-dark); font-weight: 500; }
+  .entry-x { float: right; background: none; border: none; color: var(--text-light); font-size: 16px; cursor: pointer; padding: 0 4px; }
+  .tagbar { display: flex; align-items: center; gap: 10px; font-size: 13px; margin: 7px 0; }
+  .tagbar span:first-child { width: 120px; color: var(--text-mid); }
+  .tagbar .bar { flex: 1; height: 8px; background: var(--blue-soft); border-radius: 99px; overflow: hidden; }
+  .tagbar .bar i { display: block; height: 100%; background: var(--blue-dark); border-radius: 99px; }
+  .tagbar.neg .bar i { background: #c9906f; }
+  .rz-list { padding-left: 20px; margin: 8px 0; }
+  .rz-list li { font-size: 14px; color: var(--text-mid); line-height: 1.65; margin-bottom: 3px; }
   .toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: var(--text-dark); color: #fff; padding: 10px 18px; border-radius: 99px; font-size: 13px; z-index: 80; opacity: 0; pointer-events: none; transition: opacity .25s; }
   .toast.show { opacity: 1; }
 
@@ -254,6 +270,8 @@
         <div class="what-item"><span class="what-icon">📊</span><div class="what-text"><strong>Dein Score</strong><span>Wo du gerade stehst</span></div></div>
         <div class="what-item"><span class="what-icon">🗓️</span><div class="what-text"><strong>Tagesplan</strong><span>3 Mini-Routinen pro Tag</span></div></div>
         <div class="what-item"><span class="what-icon">🥗</span><div class="what-text"><strong>Ernährungsplan</strong><span>Mit Einkaufsliste</span></div></div>
+        <div class="what-item"><span class="what-icon">🍲</span><div class="what-text"><strong>Rezepte</strong><span>Entzündungsarm, auf Knopfdruck</span></div></div>
+        <div class="what-item"><span class="what-icon">📖</span><div class="what-text"><strong>Ernährungs-Tagebuch</strong><span>Antippen, was du merkst</span></div></div>
         <div class="what-item"><span class="what-icon">🤸</span><div class="what-text"><strong>Übungen</strong><span>Überall machbar</span></div></div>
         <div class="what-item"><span class="what-icon">🌸</span><div class="what-text"><strong>Hormon-Teil</strong><span>Passend zu deinem Zyklus</span></div></div>
         <div class="what-item"><span class="what-icon">📝</span><div class="what-text"><strong>Check-in und Report</strong><span>Deine Richtung nach ein paar Tagen</span></div></div>
@@ -296,6 +314,7 @@
     <div class="tab active" id="tab-heute"></div>
     <div class="tab" id="tab-ernaehrung"></div>
     <div class="tab" id="tab-uebungen"></div>
+    <div class="tab" id="tab-rezepte"></div>
     <div class="tab" id="tab-checkin"></div>
 
     <div class="disclaimer" id="appDisclaimer"></div>
@@ -315,6 +334,7 @@
   <button class="tab-btn active" data-tab="heute" onclick="switchTab('heute')"><span class="ti">🌿</span>Heute</button>
   <button class="tab-btn" data-tab="ernaehrung" onclick="switchTab('ernaehrung')"><span class="ti">🥗</span>Ernährung</button>
   <button class="tab-btn" data-tab="uebungen" onclick="switchTab('uebungen')"><span class="ti">🤸</span>Übungen</button>
+  <button class="tab-btn" data-tab="rezepte" onclick="switchTab('rezepte')"><span class="ti">🍲</span>Rezepte</button>
   <button class="tab-btn" data-tab="checkin" onclick="switchTab('checkin')"><span class="ti">📝</span>Check-in</button>
 </nav>
 <div class="toast" id="toast"></div>
@@ -330,7 +350,8 @@ var DISCLAIMER = "Wichtiger Hinweis: Dieser Kompass dient der allgemeinen Orient
 function defaultState() {
   return { profil: null, idx: null, score: null, plan: null, start: null, checks: {}, checkins: [],
     ernForm: { weise: "Alles", unvertraeglich: "", kochzeit: "Normal, bis 40 Min" },
-    ern: null, ernChecks: {}, report: null, consent: false };
+    ern: null, ernChecks: {}, report: null, consent: false,
+    rezeptForm: { mahlzeit: "Mittag", zutaten: "", zeit: "Schnell, bis 20 Min" }, rezept: null, rezepte: [], diary: [] };
 }
 function loadState() {
   try {
@@ -593,9 +614,9 @@ function showApp() {
   renderAll();
   switchTab("heute");
 }
-function renderAll() { renderHeute(); renderErn(); renderUebungen(); renderCheckin(); }
+function renderAll() { renderHeute(); renderErn(); renderUebungen(); renderRezepte(); renderCheckin(); }
 function switchTab(name) {
-  ["heute", "ernaehrung", "uebungen", "checkin"].forEach(function (n) {
+  ["heute", "ernaehrung", "uebungen", "rezepte", "checkin"].forEach(function (n) {
     document.getElementById("tab-" + n).classList.toggle("active", n === name);
   });
   document.querySelectorAll(".tab-btn").forEach(function (b) { b.classList.toggle("active", b.getAttribute("data-tab") === name); });
@@ -606,9 +627,9 @@ function redoQuiz() {
   startTool();
 }
 function wipeAll() {
-  if (!confirm("Alle deine Daten auf diesem Gerät löschen (Plan, Check-ins, Ernährungsplan)?")) return;
+  if (!confirm("Alle deine Daten auf diesem Gerät löschen (Plan, Check-ins, Ernährungsplan, Rezepte, Tagebuch)?")) return;
   try { localStorage.removeItem(LS_KEY); } catch (e) {}
-  state = defaultState();
+  state = defaultState(); dr = null; recView = "rezept";
   showScreen("screen-intro");
 }
 
@@ -895,6 +916,8 @@ function analyze() {
     }
   }
   res.insights = res.insights.slice(0, 4);
+  var fs = foodStats();
+  res.food = fs.n >= 3 ? foodLine(fs) : "";
   return res;
 }
 function renderReport() {
@@ -925,13 +948,166 @@ function getRichtung() {
   var btn = document.getElementById("btnRep");
   btn.classList.add("disabled"); btn.textContent = "Wird erstellt ...";
   var a = analyze();
-  callApi({ mode: "report", profil: state.profil, report: { anzahl: a.n, durchschnitt: a.avg, trend: a.trend, auffaelligkeiten: a.insights } })
+  callApi({ mode: "report", profil: state.profil, report: { anzahl: a.n, durchschnitt: a.avg, trend: a.trend, auffaelligkeiten: a.insights.concat(a.food ? [a.food] : []).concat(foodStats().insights) } })
     .then(function (data) {
       if (!data || !data.richtung) throw new Error("rep");
       state.report = { date: todayStr(), richtung: data.richtung, schritte: Array.isArray(data.schritte) ? data.schritte : [], arzt: data.arzt || "" };
       saveState(); renderReport();
     })
     .catch(function () { toast("Das hat nicht geklappt, bitte nochmal versuchen"); renderReport(); });
+}
+
+
+/* ---------- Rezepte und Tagebuch ---------- */
+var MAHLZEITEN = ["Frühstück", "Mittag", "Abend", "Snack"];
+var RZ_ZEITEN = ["Schnell, bis 20 Min", "Normal, bis 40 Min", "Vorkochen"];
+var GUT_TAGS = ["Bauch ruhig", "Beine leichter", "Viel Energie", "Gut gesättigt", "Gut verträglich", "Haut ruhiger"];
+var SCHLECHT_TAGS = ["Aufgebläht", "Bauchweh", "Schwere Beine", "Mehr Schwellung", "Müde danach", "Heißhunger"];
+var WANN = ["Direkt danach", "Nach ein paar Stunden", "Am nächsten Tag"];
+var recView = "rezept";
+var dr = null;
+function initDr() { dr = { meal: "Mittag", titel: "", wann: "Direkt danach", tags: [], note: "" }; }
+function setRecView(v) { recView = v; renderRezepte(); }
+function setRzMeal(v) { state.rezeptForm.mahlzeit = v; saveState(); renderRezepte(); }
+function setRzZeit(v) { state.rezeptForm.zeit = v; saveState(); renderRezepte(); }
+function setRzZut(v) { state.rezeptForm.zutaten = v; saveState(); }
+
+function renderRezepte(err) {
+  var p = state.profil, el = document.getElementById("tab-rezepte");
+  if (!p || !el) return;
+  if (!dr) initDr();
+  var html = '<div class="seg"><button class="' + (recView === "rezept" ? "on" : "") + '" onclick="setRecView(\'rezept\')">🍲 Rezept-Generator</button><button class="' + (recView === "tagebuch" ? "on" : "") + '" onclick="setRecView(\'tagebuch\')">📖 Tagebuch</button></div>';
+  html += recView === "rezept" ? rezeptView(err) : tagebuchView();
+  html += darmMini();
+  el.innerHTML = html;
+}
+
+function rezeptView(err) {
+  var p = state.profil, f = state.rezeptForm, html = '';
+  if (p.hormoneIdx === 4) {
+    return '<div class="card warn"><div class="card-lbl">Wichtig</div><h3>Rezepte in Schwangerschaft und Stillzeit</h3><p>Dafür erstelle ich dir bewusst keine Rezepte. Bitte besprich deine Ernährung mit deiner Ärztin, Hebamme oder einer Ernährungsberatung. Das Tagebuch kannst du trotzdem nutzen.</p></div>';
+  }
+  html += '<div class="card"><div class="card-lbl">Rezept-Generator</div><h3>Entzündungsarm und alltagstauglich</h3><p>Ein Rezept, passend zu deinem Alltag und deiner Lebensphase. Kurz erklärt, ohne Schnickschnack.</p></div>';
+  html += '<div class="card"><span class="field-lbl">Für welche Mahlzeit?</span>' + chipsHtml(MAHLZEITEN, f.mahlzeit, "setRzMeal") +
+    '<span class="field-lbl">Was hast du im Haus oder was magst du gerade? (optional)</span><input class="q-input" style="margin:8px 0 14px;" maxlength="200" placeholder="Zum Beispiel: Linsen, Spinat, Süßkartoffel" value="' + esc(f.zutaten) + '" oninput="setRzZut(this.value)">' +
+    '<span class="field-lbl">Wie viel Zeit hast du?</span>' + chipsHtml(RZ_ZEITEN, f.zeit, "setRzZeit") +
+    '<p class="small">Ernährungsweise und Unverträglichkeiten nehme ich aus dem Tab Ernährung (aktuell: ' + esc(state.ernForm.weise) + (state.ernForm.unvertraeglich ? ", ohne " + esc(state.ernForm.unvertraeglich) : "") + '). Deine Angaben gehen zur Erstellung an einen KI-Dienst (Anthropic), dem du beim Start zugestimmt hast.</p>' +
+    (err ? '<div class="error-box">Das hat leider nicht geklappt. Bitte versuch es gleich noch einmal.</div>' : '') +
+    '<div class="btn-row"><button class="btn" id="btnRz" onclick="generateRezept()">' + (state.rezept ? "Noch ein Rezept" : "Rezept erstellen") + '</button></div></div>';
+  if (state.rezept) html += rezeptCard(state.rezept, -1);
+  if (state.rezepte.length) {
+    html += '<div class="card-lbl" style="margin:18px 4px 8px;">Meine gemerkten Rezepte</div>' + state.rezepte.map(function (r, i) {
+      return '<details class="acc"><summary>' + esc(r.titel) + '</summary><div class="acc-body">' + rezeptBody(r) + '<div class="btn-row"><button class="btn" onclick="toDiary(' + i + ')">Gekocht, ins Tagebuch</button><button class="btn btn-ghost" onclick="removeRezept(' + i + ')">Entfernen</button></div></div></details>';
+    }).join("");
+  }
+  html += '<div class="card warn" style="margin-top:14px;"><div class="card-lbl">Hinweis</div><p>Allgemeine Anregung, keine Ernährungstherapie. Bei Allergien, Vorerkrankungen oder Medikamenten bitte ärztlich abklären.</p></div>';
+  return html;
+}
+function rezeptBody(r) {
+  return '<p class="small">' + esc(r.zeit || "") + (r.portionen ? " · " + esc(String(r.portionen)) : "") + '</p>' +
+    '<b style="font-weight:500">Zutaten</b><ul class="rz-list">' + (r.zutaten || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join("") + '</ul>' +
+    '<b style="font-weight:500">So geht es</b><ol class="rz-list">' + (r.schritte || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join("") + '</ol>' +
+    (r.tipp ? '<p class="small" style="margin-top:8px;">💡 ' + esc(r.tipp) + '</p>' : '');
+}
+function rezeptCard(r) {
+  var saved = state.rezepte.some(function (x) { return x.titel === r.titel; });
+  return '<div class="card"><div class="card-lbl">Dein Rezept</div><h3>' + esc(r.titel) + '</h3>' + rezeptBody(r) +
+    '<div class="btn-row"><button class="btn' + (saved ? " disabled" : "") + '" onclick="saveRezept()">' + (saved ? "Gemerkt ✓" : "Rezept merken") + '</button><button class="btn btn-ghost" onclick="toDiaryCurrent()">Ins Tagebuch</button></div></div>';
+}
+function generateRezept() {
+  var btn = document.getElementById("btnRz");
+  btn.classList.add("disabled"); btn.textContent = "Wird erstellt, einen Moment ...";
+  callApi({ mode: "rezept", profil: state.profil, ernaehrung: state.ernForm, rezept: state.rezeptForm })
+    .then(function (data) {
+      if (!data || !data.titel || !Array.isArray(data.zutaten) || !Array.isArray(data.schritte)) throw new Error("rz");
+      state.rezept = data; saveState(); renderRezepte();
+    })
+    .catch(function () { renderRezepte(true); });
+}
+function saveRezept() {
+  var r = state.rezept; if (!r) return;
+  if (state.rezepte.some(function (x) { return x.titel === r.titel; })) return;
+  state.rezepte.unshift(r); state.rezepte = state.rezepte.slice(0, 30);
+  saveState(); toast("Rezept gemerkt"); renderRezepte();
+}
+function removeRezept(i) { state.rezepte.splice(i, 1); saveState(); renderRezepte(); }
+function toDiary(i) { initDr(); dr.titel = state.rezepte[i].titel; dr.meal = state.rezeptForm.mahlzeit; recView = "tagebuch"; renderRezepte(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+function toDiaryCurrent() { initDr(); dr.titel = state.rezept.titel; dr.meal = state.rezeptForm.mahlzeit; recView = "tagebuch"; renderRezepte(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+
+/* Tagebuch */
+function setDrMeal(v) { dr.meal = v; renderRezepte(); }
+function setDrWann(v) { dr.wann = v; renderRezepte(); }
+function setDrTitel(v) { dr.titel = v; var b = document.getElementById("btnDr"); if (b) b.classList.toggle("disabled", !drOk()); }
+function pickTitel(i) { dr.titel = state.rezepte[i].titel; renderRezepte(); }
+function toggleDrTag(i, good) {
+  var t = (good ? GUT_TAGS : SCHLECHT_TAGS)[i], k = dr.tags.indexOf(t);
+  if (k > -1) dr.tags.splice(k, 1); else dr.tags.push(t);
+  renderRezepte();
+}
+function drOk() { return dr.titel.trim().length > 1 && dr.tags.length > 0; }
+function saveDiary() {
+  if (!drOk()) { toast("Bitte trag ein, was du gegessen hast, und tipp mindestens eine Sache an"); return; }
+  var n = document.getElementById("drNote"); if (n) dr.note = n.value;
+  state.diary.push({ d: todayStr(), meal: dr.meal, titel: dr.titel.trim().slice(0, 80), wann: dr.wann, tags: dr.tags.slice(), note: dr.note.slice(0, 300) });
+  if (state.diary.length > 500) state.diary = state.diary.slice(-500);
+  saveState(); toast("Im Tagebuch gespeichert"); initDr(); renderRezepte();
+}
+function delDiary(i) { state.diary.splice(i, 1); saveState(); renderRezepte(); }
+
+function foodStats() {
+  var D = state.diary.slice(-60), cnt = {}, byTitel = {};
+  D.forEach(function (e) {
+    e.tags.forEach(function (t) { cnt[t] = (cnt[t] || 0) + 1; });
+    var k = e.titel.toLowerCase();
+    var o = byTitel[k] = byTitel[k] || { titel: e.titel, gut: 0, schlecht: 0, n: 0 };
+    o.n++;
+    e.tags.forEach(function (t) { if (GUT_TAGS.indexOf(t) > -1) o.gut++; else o.schlecht++; });
+  });
+  var insights = [];
+  Object.keys(byTitel).forEach(function (k) {
+    var o = byTitel[k];
+    if (o.n >= 2) {
+      if (o.gut >= o.schlecht * 2 && o.gut > 0) insights.push("Nach \"" + o.titel + "\" ging es dir meistens gut (" + o.n + " Einträge).");
+      else if (o.schlecht >= o.gut * 2 && o.schlecht > 0) insights.push("Nach \"" + o.titel + "\" hast du mehrfach Unangenehmes bemerkt (" + o.n + " Einträge).");
+    }
+  });
+  return { n: D.length, cnt: cnt, insights: insights.slice(0, 3) };
+}
+function foodLine(s) {
+  var top = Object.keys(s.cnt).sort(function (a, b) { return s.cnt[b] - s.cnt[a]; }).slice(0, 4);
+  return top.length ? "Ernährungs-Tagebuch (" + s.n + " Einträge), am häufigsten notiert: " + top.map(function (t) { return t + " " + s.cnt[t] + "x"; }).join(", ") + "." : "";
+}
+
+function tagebuchView() {
+  var html = '<div class="card"><div class="card-lbl">Ernährungs-Tagebuch</div><h3>Was habe ich gegessen, was merke ich?</h3><p>Zwei Minuten, nur antippen. So siehst du mit der Zeit, was dir guttut und was nicht. Bleibt nur auf diesem Gerät.</p></div>';
+  html += '<div class="card"><span class="field-lbl">Mahlzeit</span>' + chipsHtml(MAHLZEITEN, dr.meal, "setDrMeal") +
+    '<span class="field-lbl" style="margin-top:14px;">Was hast du gegessen?</span><input class="q-input" style="margin:8px 0 8px;" maxlength="80" placeholder="Zum Beispiel: Linsensuppe" value="' + esc(dr.titel) + '" oninput="setDrTitel(this.value)">';
+  if (state.rezepte.length) html += '<div class="chips" style="margin-bottom:8px;">' + state.rezepte.slice(0, 6).map(function (r, i) { return '<button class="chip" onclick="pickTitel(' + i + ')">' + esc(r.titel) + '</button>'; }).join("") + '</div>';
+  html += '<span class="field-lbl" style="margin-top:10px;">Wann ist es dir aufgefallen?</span>' + chipsHtml(WANN, dr.wann, "setDrWann") +
+    '<span class="field-lbl" style="margin-top:14px;">Was merkst du? 🌿 Gut</span><div class="chips">' + GUT_TAGS.map(function (x, i) { return '<button class="chip good' + (dr.tags.indexOf(x) > -1 ? " sel" : "") + '" onclick="toggleDrTag(' + i + ',true)">' + x + '</button>'; }).join("") + '</div>' +
+    '<span class="field-lbl" style="margin-top:12px;">Unangenehm</span><div class="chips">' + SCHLECHT_TAGS.map(function (x, i) { return '<button class="chip bad' + (dr.tags.indexOf(x) > -1 ? " sel" : "") + '" onclick="toggleDrTag(' + i + ',false)">' + x + '</button>'; }).join("") + '</div>' +
+    '<span class="field-lbl" style="margin-top:12px;">Notiz (optional, bleibt nur auf diesem Gerät)</span><textarea class="q-textarea" style="margin-top:8px;" id="drNote" oninput="dr.note=this.value">' + esc(dr.note) + '</textarea>' +
+    '<div class="btn-row"><button class="btn' + (drOk() ? "" : " disabled") + '" id="btnDr" onclick="saveDiary()">Eintragen</button></div></div>';
+
+  var s = foodStats();
+  if (s.n >= 3) {
+    var keys = Object.keys(s.cnt).sort(function (a, b) { return s.cnt[b] - s.cnt[a]; }).slice(0, 6), max = s.cnt[keys[0]] || 1;
+    html += '<div class="card"><div class="card-lbl">Deine Veränderungen</div>' + keys.map(function (k) {
+      var neg = SCHLECHT_TAGS.indexOf(k) > -1;
+      return '<div class="tagbar' + (neg ? " neg" : "") + '"><span>' + esc(k) + '</span><div class="bar"><i style="width:' + (s.cnt[k] / max * 100) + '%"></i></div><span style="width:28px;text-align:right;">' + s.cnt[k] + 'x</span></div>';
+    }).join("") + (s.insights.length ? s.insights.map(function (x) { return '<div class="insight">' + esc(x) + '</div>'; }).join("") : '') +
+      '<p class="small" style="margin-top:8px;">Das sind Beobachtungen, keine Beweise. Vieles spielt zusammen, zum Beispiel Zyklus, Schlaf und Stress. Auch dein Check-in-Report bezieht das Tagebuch ein.</p></div>';
+  } else {
+    html += '<div class="card soft"><div class="card-lbl">Deine Veränderungen</div><p>Noch ' + (3 - s.n) + (3 - s.n === 1 ? " Eintrag" : " Einträge") + ' bis zur ersten Auswertung.</p></div>';
+  }
+  if (state.diary.length) {
+    var last = state.diary.map(function (e, i) { return { e: e, i: i }; }).slice(-8).reverse();
+    html += '<div class="card"><div class="card-lbl">Letzte Einträge</div>' + last.map(function (o) {
+      var e = o.e;
+      return '<div class="entry"><button class="entry-x" aria-label="Eintrag löschen" onclick="delDiary(' + o.i + ')">×</button><b>' + esc(e.titel) + '</b> <span class="small">' + esc(e.meal) + ', ' + esc(e.d) + '</span><br>' + esc(e.tags.join(", ")) + ' <span class="small">(' + esc(e.wann) + ')</span>' + (e.note ? '<br><span class="small">' + esc(e.note) + '</span>' : '') + '</div>';
+    }).join("") + '</div>';
+  }
+  return html;
 }
 
 /* ---------- Init ---------- */
